@@ -5,21 +5,46 @@ from lxml import html
 from fake_useragent import UserAgent
 import sys, os
 import logging
+import torrent_parser
+from fuzzywuzzy import fuzz
 
-class download:
-    def filetender(url, is_subtitle=False):
+class analysis:
+    def torrent_info():
+        is_dir
         pass
 
-    def crawling(url):
+    def media_info(title, year):
+        pass
+
+    def match_score(src, dst):
+        return(fuzz.ratio(src, dst))
+
+class download:
+    def crawling(url, refer=None):
         with requests.session() as s:
+            if refer:
+                s.headers.update({'refer' : refer})
             s.headers.update({'User-Agent' : str(UserAgent().chrome)})
             res = s.get(url, allow_redirects=True)
             if not res.status_code == 200:
                 return False
             content = html.fromstring(res.content)
         return content
+    
+    def savefile(content, filename):
+        try:
+            with open(filename, 'wb') as f:
+                f.write(content)
+            return True
+        except:
+            return False
 
-class torrentmi(download):
+class filetner(download):
+    #http://file.filetender.com/down.php?link=
+    def filetender(url):
+        pass
+
+class torrentmi(download, analysis):
     def __init__(self, dir, url):
         self.dir = dir
         self.url = url
@@ -31,23 +56,38 @@ class torrentmi(download):
             title = t.xpath('./td[2]/a/span[1]/text()')[0]
             genre = t.xpath('./td[2]/a/em/text()')[0]
             link = t.xpath('./td[2]/a/@href')[0]
-            print(title)
             if t.xpath('./td[2]/a/span[2]/span/text()')[0] in ['무자막']:
                 continue
             elif t.xpath('./td[2]/a/span[2]/span/text()')[0] in ['한국영화', '자체자막']:
+                print(title)
                 is_subtitle = False
                 torrentmi.child(torrentmi.crawling('https://www.torrentmi.com/' + link))
             else:
+                print(title)
                 is_subtitle = True
-                torrentmi.child(torrentmi.crawling('https://www.torrentmi.com/' + link))
+                torrentmi.child(torrentmi.crawling('https://www.torrentmi.com/' + link), is_subtitle = True)
 
-    def child(content):
+    def child(content, is_subtitle = False):
+        is_extsub = False
+        sub_lists = {}
+        seed_lists = {}
+
         lists = content.xpath('//div[@class="downLoad"]')
         for i in lists:
-            if any(x in i.xpath('./a/text()')[0] for x in [".smi", ".srt", ".ass"]):
-                print("\t 자막 : " + i.xpath('./a/text()')[0])
-            elif any(x in i.xpath('./a/text()')[0] for x in [".torrent"]):
-                print("\t 씨앗 : " + i.xpath('./a/text()')[0])
+            if any(x in i.xpath('./a/text()')[0] for x in [".torrent"]):
+                # Todo : Logging
+                #seed_lists[i.xpath('./a/text()')[0]] = i.xpath('./a/@href')[0]
+                print(i.xpath('./a/@href')[0])
+            elif any(x in i.xpath('./a/text()')[0] for x in [".smi", ".srt", ".ass"]):
+                # Todo : Logging
+                is_extsub = True
+                #sub_lists[i.xpath('./a/text()')[0]] = i.xpath('./a/@href')[0]
+                print(i.xpath('./a/@href')[0])
+            else:
+                # Todo : Logging
+                continue
+        
+                
 '''
 #Todo
     - 자막이 여러개 일 때 처리
@@ -60,9 +100,10 @@ class torrentmi(download):
         * 씨앗파일 정보가져오기?
         * 안되는 경우 Transmissionrpc에서 정보가져오기
         * 마그넷인 경우....답 있나 -_-
-        * Transmission 외에 다른 클라이언트 처리시 방안강구 => is_dir의 class???
+        * Transmission 외에 다른 클라이언트 처리시 방안강구 => is_dir의 추상화???
 '''
 
 
 if __name__ == "__main__":
     torrentmi('영화', 'https://www.torrentmi.com/list.php?b_id=tmovie')
+    
