@@ -16,7 +16,7 @@ class analysis:
     def media_info(title, year):
         pass
 
-    def match_score(src, dst):
+    def string_score(src, dst):
         return(fuzz.ratio(src, dst))
 
 class download:
@@ -39,11 +39,6 @@ class download:
         except:
             return False
 
-class filetner(download):
-    #http://file.filetender.com/down.php?link=
-    def filetender(url):
-        pass
-
 class torrentmi(download, analysis):
     def __init__(self, dir, url):
         self.dir = dir
@@ -55,37 +50,75 @@ class torrentmi(download, analysis):
         for t in tables:
             title = t.xpath('./td[2]/a/span[1]/text()')[0]
             genre = t.xpath('./td[2]/a/em/text()')[0]
-            link = t.xpath('./td[2]/a/@href')[0]
+            link = 'https://www.torrentmi.com/' + t.xpath('./td[2]/a/@href')[0]
             if t.xpath('./td[2]/a/span[2]/span/text()')[0] in ['무자막']:
                 continue
             elif t.xpath('./td[2]/a/span[2]/span/text()')[0] in ['한국영화', '자체자막']:
                 print(title)
                 is_subtitle = False
-                torrentmi.child(torrentmi.crawling('https://www.torrentmi.com/' + link))
+                torrentmi.child(torrentmi.crawling(link), link)
             else:
                 print(title)
                 is_subtitle = True
-                torrentmi.child(torrentmi.crawling('https://www.torrentmi.com/' + link), is_subtitle = True)
+                torrentmi.child(torrentmi.crawling(link), link, is_subtitle = True)
 
-    def child(content, is_subtitle = False):
+    def child(content, ref, is_subtitle = False):
+        lists = content.xpath('//div[@class="downLoad"]')
         is_extsub = False
         sub_lists = {}
         seed_lists = {}
-
-        lists = content.xpath('//div[@class="downLoad"]')
         for i in lists:
             if any(x in i.xpath('./a/text()')[0] for x in [".torrent"]):
                 # Todo : Logging
-                #seed_lists[i.xpath('./a/text()')[0]] = i.xpath('./a/@href')[0]
-                print(i.xpath('./a/@href')[0])
+                seed_lists.update({i.xpath('./a/text()')[0] : i.xpath('./a/@href')[0]})
+                print('\t 씨앗 : {}, 링크 : {}'.format(i.xpath('./a/text()')[0], i.xpath('./a/@href')[0]))
+                pass
+               
             elif any(x in i.xpath('./a/text()')[0] for x in [".smi", ".srt", ".ass"]):
                 # Todo : Logging
                 is_extsub = True
-                #sub_lists[i.xpath('./a/text()')[0]] = i.xpath('./a/@href')[0]
-                print(i.xpath('./a/@href')[0])
+                sub_lists.update({i.xpath('./a/text()')[0] : i.xpath('./a/@href')[0]})
+                print('\t 외부자막 : {}, 링크 : {}'.format(i.xpath('./a/text()')[0], i.xpath('./a/@href')[0]))
+                pass
             else:
                 # Todo : Logging
                 continue
+        torrentmi.validatation(seed_lists, sub_lists, is_subtitle, is_extsub) #자막파일명, 씨앗파일명 근사유무 확인
+
+    def validatation(seed_lists, sub_lists, is_subtitle = False, is_extsub = False):
+        if len(seed_lists) < 1: # not seed pass
+            # Todo : Logging
+            print('\t\t #Case 01 : 씨앗파일 없음')
+            return False
+        elif not is_extsub and not is_subtitle: # Not subtitle
+            # Todo : Download -> 
+            print('\t\t #Case 02 : 자막없음')
+            pass
+        elif not is_extsub and is_subtitle: # Seed Internal subtitle
+            # Todo : Get Torrent Info => subtitle file rename
+            print('\t\t #Case 03 : 내부자막')
+            pass
+        elif is_extsub and is_subtitle: # Seed External subtitle
+            # Todo : Get Torrent Info => Internal subtitle check => disabled
+            #                            External subtitle rename => (optional)srt convert
+            print('\t\t #Case 04 : 외부자막')
+            pass
+        else: # Unkwon Error
+            # Todo : Logging
+            print('\t\t #Case 99 : 정의되지 않은 오류')
+            return False
+    
+    def score(src, dst):
+        score = 0
+        for s in src:
+            for d in  dst:
+                if score < torrentmi.string_score(src, dst):
+                    score = torrentmi.string_score(src, dst)
+        return score, src, dst
+
+
+    def filetender(content, ref):
+        pass
         
                 
 '''
