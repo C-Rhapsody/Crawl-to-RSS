@@ -110,10 +110,12 @@ class torrentmi(download, analysis):
     
     def score(src, dst):
         score = 0
+        result = {}
         for s in src:
             for d in  dst:
-                if score < torrentmi.string_score(src, dst):
-                    score = torrentmi.string_score(src, dst)
+                if score < torrentmi.string_score(s, d):
+                    score = torrentmi.string_score(s, d)
+                    result.update({s,d})
         return score, src, dst
 
 
